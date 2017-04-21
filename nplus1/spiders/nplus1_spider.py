@@ -11,7 +11,7 @@ from nplus1.db import DB
 
 
 def is_article_url(url):
-    return any([part in url for part in ['/news/', '/material/', '/blog/']])
+    return bool(re.search(r'/(news|material|blog)/\d+/\d+/\d+/.+', url))
 
 
 class Nplus1Spider(Spider):
@@ -41,6 +41,8 @@ class Nplus1Spider(Spider):
             if not self.db.article_is_already_parsed(url):
                 self.db.create_article_stub(url)
                 yield Request(url)
+            else:
+                self.log('Will not scrape "{}" as it is parsed already'.format(url))
 
     def parse_article(self, response):
         """Extract item from the response"""
