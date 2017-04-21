@@ -70,10 +70,7 @@ class Nplus1Spider(Spider):
             item['difficulty'] = float(meta_sel.xpath('.//span[@class="difficult-value"]/text()').extract_first())
 
         body_xpath = '//article/div[contains(@class, "body")]'
-        text = extract_nested_text(response, body_xpath)
-        text = re.sub('\r*\n', ' ', text)
-        text = re.sub('\w+', ' ', text)
-        item['text'] = text
+        item['text'] = cleanup_text(extract_nested_text(response, body_xpath))
 
         item['internal_links'] = []
         item['external_links'] = []
@@ -119,4 +116,11 @@ def extract_nested_text(response, xpath):
     html = response.xpath(xpath).extract_first()
     tree = lxml.html.fromstring(html)
     text = lxml.html.tostring(tree, method='text', encoding='utf-8').strip()
+    return text
+
+
+def cleanup_text(text):
+    text = re.sub(r'\t', ' ', text)
+    text = re.sub(r'(\r*\n)\1+', '\n', text)
+    text = re.sub(r'\w', ' ', text)
     return text
