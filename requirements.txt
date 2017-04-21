@@ -1,0 +1,2 @@
+scrapy
+web2py_dal
