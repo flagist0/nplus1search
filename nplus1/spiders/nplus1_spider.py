@@ -100,10 +100,12 @@ class Nplus1Spider(Spider):
         return author.strip()
 
     def extract_links(self, response):
+        junk_exts = ['.jpg', '.pdf']
+        junk_re = '\.{}$'.format('|'.join(junk_exts))
         urls = []
         for url in set(response.xpath('//a/@href').extract()):
             if self.base_url in url or url.startswith('/'):
-                if url.endswith('.jpg'):
+                if re.search(junk_re, url):
                     continue
                 url = (url if self.base_url in url else self.base_url + url).strip()
                 urls.append(url)
