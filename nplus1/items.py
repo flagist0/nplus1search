@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from scrapy import Item, Field
-
+from pprint import pformat
 
 class Nplus1Item(Item):
     url = Field()
@@ -15,3 +15,6 @@ class Nplus1Item(Item):
     external_links = Field()
     author = Field()
 
+    def __repr__(self):
+        req_fields = ['url', 'title', 'description', 'author', 'internal_links']
+        return pformat({f: self[f] for f in req_fields})
