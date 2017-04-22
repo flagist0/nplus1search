@@ -48,3 +48,6 @@ class DB(object):
 
     def article_stubs_num(self):
         return self.db((self.a.title == None) & (self.a.url.regexp(self.article_url_re))).count()
+
+    def remove_url(self, url):
+        self.db(self.a.url == url).delete()

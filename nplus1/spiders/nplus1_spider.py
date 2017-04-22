@@ -13,6 +13,7 @@ from nplus1.db import DB
 class Nplus1Spider(Spider):
     """Nplus1 spider class"""
     name = 'nplus1'
+    handle_httpstatus_list = [404]
     article_url_re = r'/(news|material|blog)/\d+/\d+/\d+/.+'
 
     def __init__(self, *args, **kwargs):
@@ -34,15 +35,19 @@ class Nplus1Spider(Spider):
             yield Request(url)
 
     def parse(self, response):
-        if self.is_article_url(response.url):
-            yield self.parse_article(response)
-        urls = self.extract_links(response)
-        for url in urls:
-            if not self.db.article_is_already_parsed(url):
-                self.db.create_article_stub(url)
-                yield Request(url)
-            # else:
-            #     self.log('Will not scrape "{}" as it is parsed already'.format(url))
+        if response.status == 200:
+            if self.is_article_url(response.url):
+                yield self.parse_article(response)
+            urls = self.extract_links(response)
+            for url in urls:
+                if not self.db.article_is_already_parsed(url):
+                    self.db.create_article_stub(url)
+                    yield Request(url)
+                # else:
+                #     self.log('Will not scrape "{}" as it is parsed already'.format(url))
+        elif response.status == 404:
+            self.log('Removing non-existent url {}'.format(response.url))
+            self.db.remove_url(response.url)
 
     def parse_article(self, response):
         """Extract item from the response"""
