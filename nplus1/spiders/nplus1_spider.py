@@ -43,8 +43,11 @@ class Nplus1Spider(Spider):
                 if not self.db.article_is_already_parsed(url):
                     self.db.create_article_stub(url)
                     yield Request(url)
-                # else:
-                #     self.log('Will not scrape "{}" as it is parsed already'.format(url))
+            # Remove redirecting urls to avoid rescraping
+            if 'redirect_urls' in response.request.meta:
+                redirecting_url = response.request.meta['redirect_urls'][0]
+                self.log('Removing forwarding url {}'.format(redirecting_url))
+                self.db.remove_url(redirecting_url)
         elif response.status == 404:
             self.log('Removing non-existent url {}'.format(response.url))
             self.db.remove_url(response.url)
