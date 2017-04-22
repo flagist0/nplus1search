@@ -10,13 +10,10 @@ from nplus1.items import Nplus1Item
 from nplus1.db import DB
 
 
-def is_article_url(url):
-    return bool(re.search(r'/(news|material|blog)/\d+/\d+/\d+/.+', url))
-
-
 class Nplus1Spider(Spider):
     """Nplus1 spider class"""
     name = 'nplus1'
+    article_url_re = r'/(news|material|blog)/\d+/\d+/\d+/.+'
 
     def __init__(self, *args, **kwargs):
         """Initialize spider"""
@@ -24,25 +21,28 @@ class Nplus1Spider(Spider):
         self.start_urls = ['https://nplus1.ru']
         self.base_url = self.start_urls[0]
 
-        self.db = DB()
+        self.db = DB(self.article_url_re)
 
         super(Nplus1Spider, self).__init__(*args, **kwargs)
 
     def start_requests(self):
         yield Request(self.start_urls[0])
+        self.log('There are {} parsed articles and {} unparsed article urls in db'.format(
+            self.db.parsed_articles_num(),
+            self.db.article_stubs_num()))
         for url in self.db.iter_unparsed_articles_urls():
             yield Request(url)
 
     def parse(self, response):
-        if is_article_url(response.url):
+        if self.is_article_url(response.url):
             yield self.parse_article(response)
         urls = self.extract_links(response)
         for url in urls:
             if not self.db.article_is_already_parsed(url):
                 self.db.create_article_stub(url)
                 yield Request(url)
-            else:
-                self.log('Will not scrape "{}" as it is parsed already'.format(url))
+            # else:
+            #     self.log('Will not scrape "{}" as it is parsed already'.format(url))
 
     def parse_article(self, response):
         """Extract item from the response"""
@@ -84,6 +84,9 @@ class Nplus1Spider(Spider):
         item['author'] = self.extract_author(response)
 
         return item
+
+    def is_article_url(self, url):
+        return bool(re.search(self.article_url_re, url))
 
     @staticmethod
     def extract_author(response):
