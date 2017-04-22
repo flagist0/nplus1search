@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import lxml
 
 from scrapy.spiders import Spider
 from scrapy.http import Request
 
 from nplus1.items import Nplus1Item
-from nplus1.db import DB
+from nplus1.db import DB, PageType
+
+DIGEST_CHANGEABLE_DAYS_NUM = 2
 
 
 class Nplus1Spider(Spider):
     """Nplus1 spider class"""
     name = 'nplus1'
-    handle_httpstatus_list = [404]
-    article_url_re = r'/(news|material|blog)/\d+/\d+/\d+/.+'
+    handle_httpstatus_list = [404] # Handle 404 status code
+    base_url_re = r'/(news|material|blog)/(\d+/\d+/\d+)'
+    digest_url_re = base_url_re + r'$'
+    article_url_re = base_url_re + r'/.+'
 
     def __init__(self, *args, **kwargs):
         """Initialize spider"""
@@ -28,29 +32,54 @@ class Nplus1Spider(Spider):
 
     def start_requests(self):
         yield Request(self.start_urls[0])
-        self.log('There are {} parsed articles and {} unparsed article urls in db'.format(
+        self.log('There are {} parsed articles, {} unparsed article urls and {} unparsed links in db'.format(
             self.db.parsed_articles_num(),
-            self.db.article_stubs_num()))
+            self.db.article_stubs_num(),
+            self.db.unparsed_links_num()))
         for url in self.db.iter_unparsed_articles_urls():
             yield Request(url)
 
     def parse(self, response):
         if response.status == 200:
-            if self.is_article_url(response.url):
+            if self.page_type(response.url) == PageType.article:
                 yield self.parse_article(response)
+
             urls = self.extract_links(response)
             for url in urls:
-                if not self.db.article_is_already_parsed(url):
-                    self.db.create_article_stub(url)
-                    yield Request(url)
+                page_type = self.page_type(url)
+                if (page_type == PageType.article and self.db.article_is_parsed(url)) or\
+                    (page_type == PageType.digest and self.db.digest_is_parsed(url) and
+                        not self.digest_could_change(url)):
+                    continue
+                self.db.create_page_stub(url, page_type)
+
+                yield Request(url)
+
+            if self.page_type(response.url) == PageType.digest:
+                self.db.mark_digest_as_parsed(response.url)
+
             # Remove redirecting urls to avoid rescraping
             if 'redirect_urls' in response.request.meta:
                 redirecting_url = response.request.meta['redirect_urls'][0]
                 self.log('Removing forwarding url {}'.format(redirecting_url))
-                self.db.remove_url(redirecting_url)
+                self.db.remove_article_url(redirecting_url)
+
         elif response.status == 404:
             self.log('Removing non-existent url {}'.format(response.url))
-            self.db.remove_url(response.url)
+            self.db.remove_article_url(response.url)
+
+    def page_type(self, url):
+        if re.search(self.article_url_re, url):
+            return PageType.article
+        elif re.search(self.digest_url_re, url):
+            return PageType.digest
+        else:
+            return PageType.other
+
+    def digest_could_change(self, url):
+        digest_date_str = re.search(self.digest_url_re, url).group(2)
+        digest_date = datetime.strptime(digest_date_str, '%Y/%m/%d')
+        return datetime.today() - digest_date <= timedelta(days=DIGEST_CHANGEABLE_DAYS_NUM)
 
     def parse_article(self, response):
         """Extract item from the response"""
