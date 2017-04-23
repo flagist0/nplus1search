@@ -20,4 +20,4 @@ ITEM_PIPELINES = {
     'nplus1.pipelines.Nplus1Pipeline': 300
 }
 
-#DOWNLOAD_DELAY = 2
+DOWNLOAD_DELAY = 2
