@@ -1,2 +1,4 @@
 scrapy
 web2py_dal
+python-telegram-bot
+peewee
