@@ -9,9 +9,14 @@ from scrapy.http import Request
 
 from article import Article
 from link import Link
-from nplus1.db import DB, PageType
 
 DIGEST_CHANGEABLE_DAYS_NUM = 2
+
+
+class PageType(object):
+    article = 'article'
+    digest = 'digest'
+    other = 'other'
 
 
 class Nplus1Spider(Spider):
@@ -27,8 +32,6 @@ class Nplus1Spider(Spider):
         self.allowed_domains = ['nplus1.ru']
         self.base_url = 'https://nplus1.ru'
         self.start_urls = [self.base_url]
-
-        self.db = DB()
 
         super(Nplus1Spider, self).__init__(*args, **kwargs)
 
@@ -53,7 +56,7 @@ class Nplus1Spider(Spider):
                     (page_type == PageType.digest and Link.is_parsed(url) and
                         not self.digest_could_change(url)):
                     continue
-                self.db.create_page_stub(url, page_type)
+                (Article if self.page_type(url) == PageType.article else Link).by_url(url)  # This will create page stub
 
                 yield Request(url)
 
@@ -64,11 +67,11 @@ class Nplus1Spider(Spider):
             if 'redirect_urls' in response.request.meta:
                 redirecting_url = response.request.meta['redirect_urls'][0]
                 self.log('Removing forwarding url {}'.format(redirecting_url))
-                self.db.remove_article_url(redirecting_url)
+                Article.by_url(redirecting_url).delete_instance()
 
         elif response.status == 404:
             self.log('Removing non-existent url {}'.format(response.url))
-            self.db.remove_article_url(response.url)
+            Article.by_url(response.url).delete_instance()
 
     def page_type(self, url):
         if re.search(self.article_url_re, url):
