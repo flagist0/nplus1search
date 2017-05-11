@@ -1,5 +1,6 @@
-from item import Article, Link
 from web2py_dal import DAL, Field
+
+from models import Article, Link
 
 
 class PageType(object):
@@ -44,18 +45,22 @@ class DB(object):
             table.insert(url=url)
             self.db.commit()
 
-    def article_is_parsed(self, url):
+    @staticmethod
+    def article_is_parsed(url):
         return Article.get(Article.url == url).title is not None
 
-    def digest_is_parsed(self, url):
+    @staticmethod
+    def digest_is_parsed(url):
         return Link.get(Link.url == url).parsed
 
-    def mark_digest_as_parsed(self, url):
+    @staticmethod
+    def mark_digest_as_parsed(url):
         digest = Link.get(Link.url == url)
         digest.parsed = True
         digest.save()
 
-    def iter_unparsed_articles_urls(self):
+    @staticmethod
+    def iter_unparsed_articles_urls():
         # Article urls go first
         for art in Article.select().where(Article.url != None, Article.title == None).select():
             yield art.url
@@ -67,6 +72,7 @@ class DB(object):
     def save_article(self, article):
         self.db(self.a.url == article['url']).update(**article)
         self.db.commit()
+
 
     @staticmethod
     def parsed_articles_num():
