@@ -7,6 +7,27 @@ class Link(BaseModel):
     parsed = BooleanField(default=False)
 
     @staticmethod
+    def by_url(url):
+        return Link.get(Link.url == url)
+
+    @staticmethod
+    def unparsed_num():
+        return Link.select().where(Link.url != None, Link.parsed == False).count()
+
+    @staticmethod
     def iter_unparsed_urls():
         for link in Link.select().where(Link.url != None, Link.parsed == False):
             yield link.url
+
+    @staticmethod
+    def is_parsed(url):
+        try:
+            link = Link.get(Link.url == url)
+        except Link.DoesNotExist:
+            return False
+        else:
+            return link.parsed
+
+    def set_parsed(self):
+        self.parsed = True
+        self.save()

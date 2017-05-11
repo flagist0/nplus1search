@@ -40,6 +40,15 @@ class Article(BaseModel):
         for art in Article.select().where(Article.url != None, Article.title == None).select():
             yield art.url
 
+
+    @staticmethod
+    def parsed_num():
+        return Article.select().where(Article.title != None).count()
+
+    @staticmethod
+    def unparsed_num():
+        return Article.select().where(Article.title == None).count()
+
     class ScrapyItem(scrapy.Item):
         data = scrapy.Field()
 

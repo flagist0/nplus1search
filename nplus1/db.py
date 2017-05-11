@@ -47,33 +47,5 @@ class DB(object):
             self.db.commit()
 
     @staticmethod
-    def digest_is_parsed(url):
-        return Link.get(Link.url == url).parsed
-
-    @staticmethod
-    def mark_digest_as_parsed(url):
-        digest = Link.get(Link.url == url)
-        digest.parsed = True
-        digest.save()
-
-
-    def save_article(self, article):
-        self.db(self.a.url == article['url']).update(**article)
-        self.db.commit()
-
-
-    @staticmethod
-    def parsed_articles_num():
-        return Article.select().where(Article.title != None).count()
-
-    @staticmethod
-    def article_stubs_num():
-        return Article.select().where(Article.title == None).count()
-
-    @staticmethod
-    def unparsed_links_num():
-        return Link.select().where(Link.url != None, Link.parsed == False).count()
-
-    @staticmethod
     def remove_article_url(url):
         Article.get(Article.url == url).delete_instance()

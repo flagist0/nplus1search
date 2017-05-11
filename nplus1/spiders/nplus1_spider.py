@@ -35,9 +35,9 @@ class Nplus1Spider(Spider):
     def start_requests(self):
         yield Request(self.start_urls[0])
         self.log('There are {} parsed articles, {} unparsed article urls and {} unparsed links in db'.format(
-            self.db.parsed_articles_num(),
-            self.db.article_stubs_num(),
-            self.db.unparsed_links_num()))
+            Article.parsed_num(),
+            Article.unparsed_num(),
+            Link.unparsed_num()))
         for url in chain(Article.iter_unparsed_urls(), Link.iter_unparsed_urls()):
             yield Request(url)
 
@@ -50,7 +50,7 @@ class Nplus1Spider(Spider):
             for url in urls:
                 page_type = self.page_type(url)
                 if (page_type == PageType.article and Article.is_parsed(url)) or\
-                    (page_type == PageType.digest and self.db.digest_is_parsed(url) and
+                    (page_type == PageType.digest and Link.is_parsed(url) and
                         not self.digest_could_change(url)):
                     continue
                 self.db.create_page_stub(url, page_type)
@@ -58,7 +58,7 @@ class Nplus1Spider(Spider):
                 yield Request(url)
 
             if self.page_type(response.url) == PageType.digest:
-                self.db.mark_digest_as_parsed(response.url)
+                Link.by_url(response.url).set_parsed()
 
             # Remove redirecting urls to avoid rescraping
             if 'redirect_urls' in response.request.meta:
@@ -99,9 +99,9 @@ class Nplus1Spider(Spider):
 
         meta_sel = response.xpath('//div[@class="meta"]')
 
-        article.rubrics = [re.search('rubric/(.+)$', url).group(1) for url in
+        article.rubrics = [re.search(r'rubric/(.+)$', url).group(1) for url in
                            meta_sel.xpath('.//p/a[contains(@href, "rubric")]/@href').extract()]
-        article.themes = [re.search('theme/(.+)$', url).group(1) for url in
+        article.themes = [re.search(r'theme/(.+)$', url).group(1) for url in
                           meta_sel.xpath('.//p/a[contains(@href, "theme")]/@href').extract()]
 
         if meta_sel.xpath('.//span[@class="difficult-value"]'):
