@@ -10,9 +10,9 @@ class PageType(object):
 class DB(object):
     def __init__(self, article_url_re):
         self.article_url_re = article_url_re
-        self.db = DAL('sqlite://nplus1.sqlite', pool_size=10, check_reserved=['sqlite', 'mysql'])
+        self.db = DAL('sqlite://nplus1.sqlite', pool_size=10, check_reserved=['sqlite', 'mysql'], fake_migrate=True)
 
-        self.db.define_table('articles',
+        self.db.define_table('article',
                              Field('url', unique=True),
                              Field('title'),
                              Field('description'),
@@ -25,18 +25,18 @@ class DB(object):
                              Field('external_links', 'json'),
                              Field('author'))
 
-        self.db.define_table('links',
+        self.db.define_table('link',
                              Field('url', unique=True),
                              Field('parsed', 'boolean', default=False))
 
-        self.a = self.db.articles
-        self.l = self.db.links
+        self.a = self.db.article
+        self.l = self.db.link
 
     def table_by_page_type(self, page_type):
         if page_type == PageType.article:
-            return self.db.articles
+            return self.db.article
         else:
-            return self.db.links
+            return self.db.link
 
     def create_page_stub(self, url, page_type):
         table = self.table_by_page_type(page_type)
