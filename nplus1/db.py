@@ -55,15 +55,6 @@ class DB(object):
         digest.parsed = True
         digest.save()
 
-    @staticmethod
-    def iter_unparsed_articles_urls():
-        # Article urls go first
-        for art in Article.select().where(Article.url != None, Article.title == None).select():
-            yield art.url
-
-        # All the other urls go next
-        for link in Link.select().where(Link.url != None, Link.parsed == False):
-            yield link.url
 
     def save_article(self, article):
         self.db(self.a.url == article['url']).update(**article)

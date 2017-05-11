@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import re
 from datetime import datetime, timedelta
+from itertools import chain
 import lxml
 
 from scrapy.spiders import Spider
 from scrapy.http import Request
 
-from models import Article
+from models import Article, Link
 from nplus1.db import DB, PageType
 
 DIGEST_CHANGEABLE_DAYS_NUM = 2
@@ -36,7 +37,7 @@ class Nplus1Spider(Spider):
             self.db.parsed_articles_num(),
             self.db.article_stubs_num(),
             self.db.unparsed_links_num()))
-        for url in self.db.iter_unparsed_articles_urls():
+        for url in chain(Article.iter_unparsed_urls(), Link.iter_unparsed_urls()):
             yield Request(url)
 
     def parse(self, response):

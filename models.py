@@ -43,6 +43,12 @@ class Article(BaseModel):
         else:
             return art.title is not None
 
+    @staticmethod
+    def iter_unparsed_urls():
+        for art in Article.select().where(Article.url != None, Article.title == None).select():
+            yield art.url
+
+
 
     class ScrapyItem(scrapy.Item):
         data = scrapy.Field()
@@ -58,3 +64,9 @@ class Article(BaseModel):
 class Link(BaseModel):
     url = CharField(unique=True)
     parsed = BooleanField(default=False)
+
+    @staticmethod
+    def iter_unparsed_urls():
+        for link in Link.select().where(Link.url != None, Link.parsed == False):
+            yield link.url
+
