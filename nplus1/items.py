@@ -2,6 +2,7 @@
 from scrapy import Item, Field
 from pprint import pformat
 
+
 class Nplus1Item(Item):
     url = Field()
     title = Field()

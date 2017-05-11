@@ -15,7 +15,7 @@ DIGEST_CHANGEABLE_DAYS_NUM = 2
 class Nplus1Spider(Spider):
     """Nplus1 spider class"""
     name = 'nplus1'
-    handle_httpstatus_list = [404] # Handle 404 status code
+    handle_httpstatus_list = [404]  # Handle 404 status code
     base_url_re = r'/(news|material|blog)/(\d+/\d+/\d+)'
     digest_url_re = base_url_re + r'$'
     article_url_re = base_url_re + r'/.+'
