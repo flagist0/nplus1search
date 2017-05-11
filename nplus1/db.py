@@ -46,10 +46,6 @@ class DB(object):
             self.db.commit()
 
     @staticmethod
-    def article_is_parsed(url):
-        return Article.get(Article.url == url).title is not None
-
-    @staticmethod
     def digest_is_parsed(url):
         return Link.get(Link.url == url).parsed
 

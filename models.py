@@ -29,6 +29,21 @@ class Article(BaseModel):
     external_links = JSONField()
     author = CharField()
 
+    @classmethod
+    def by_url(cls, url):
+        return cls.get_or_create(defaults={'url': url},
+                                 url=url)[0]
+
+    @staticmethod
+    def is_parsed(url):
+        try:
+            art = Article.get(Article.url == url)
+        except Article.DoesNotExist:
+            return False
+        else:
+            return art.title is not None
+
+
     class ScrapyItem(scrapy.Item):
         data = scrapy.Field()
 

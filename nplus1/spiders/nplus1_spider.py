@@ -23,8 +23,8 @@ class Nplus1Spider(Spider):
     def __init__(self, *args, **kwargs):
         """Initialize spider"""
         self.allowed_domains = ['nplus1.ru']
-        self.start_urls = ['https://nplus1.ru']
-        self.base_url = self.start_urls[0]
+        self.base_url = 'https://nplus1.ru'
+        self.start_urls = [self.base_url]
 
         self.db = DB()
 
@@ -47,7 +47,7 @@ class Nplus1Spider(Spider):
             urls = self.extract_links(response)
             for url in urls:
                 page_type = self.page_type(url)
-                if (page_type == PageType.article and self.db.article_is_parsed(url)) or\
+                if (page_type == PageType.article and Article.is_parsed(url)) or\
                     (page_type == PageType.digest and self.db.digest_is_parsed(url) and
                         not self.digest_could_change(url)):
                     continue
@@ -84,9 +84,8 @@ class Nplus1Spider(Spider):
     def parse_article(self, response):
         """Extract item from the response"""
         self.log('Extracting data from url %s' % response.url)
-        article = Article.get(Article.url == response.url)
+        article = Article.by_url(response.url)
 
-        article.url = response.url
         article.title = response.xpath('//meta[@property="og:title"]/@content').extract_first().strip()
 
         description = response.xpath('//meta[@property="og:description"]/@content').extract_first().strip()
