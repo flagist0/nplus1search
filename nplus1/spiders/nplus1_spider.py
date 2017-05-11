@@ -6,7 +6,7 @@ import lxml
 from scrapy.spiders import Spider
 from scrapy.http import Request
 
-from nplus1.items import Nplus1Item
+from models import Article
 from nplus1.db import DB, PageType
 
 DIGEST_CHANGEABLE_DAYS_NUM = 2
@@ -84,43 +84,44 @@ class Nplus1Spider(Spider):
     def parse_article(self, response):
         """Extract item from the response"""
         self.log('Extracting data from url %s' % response.url)
-        item = Nplus1Item()
+        article = Article.get(Article.url == response.url)
 
-        item['url'] = response.url
-        item['title'] = response.xpath('//meta[@property="og:title"]/@content').extract_first().strip()
+        article.url = response.url
+        article.title = response.xpath('//meta[@property="og:title"]/@content').extract_first().strip()
 
         description = response.xpath('//meta[@property="og:description"]/@content').extract_first().strip()
         if description:
-            item['description'] = description
+            article.description = description
 
         date = response.xpath('//time[@itemprop="datePublished"]/@content').extract_first()
-        item['date'] = datetime.strptime(date, '%Y-%m-%d')
+        article.date = datetime.strptime(date, '%Y-%m-%d')
 
         meta_sel = response.xpath('//div[@class="meta"]')
 
-        item['rubrics'] = [re.search('rubric/(.+)$', url).group(1) for url in
+        article.rubrics = [re.search('rubric/(.+)$', url).group(1) for url in
                            meta_sel.xpath('.//p/a[contains(@href, "rubric")]/@href').extract()]
-        item['themes'] = [re.search('theme/(.+)$', url).group(1) for url in
+        article.themes = [re.search('theme/(.+)$', url).group(1) for url in
                           meta_sel.xpath('.//p/a[contains(@href, "theme")]/@href').extract()]
 
         if meta_sel.xpath('.//span[@class="difficult-value"]'):
-            item['difficulty'] = float(meta_sel.xpath('.//span[@class="difficult-value"]/text()').extract_first())
+            article.difficulty = float(meta_sel.xpath('.//span[@class="difficult-value"]/text()').extract_first())
 
         body_xpath = '//article/div[contains(@class, "body")]'
-        item['text'] = cleanup_text(extract_nested_text(response, body_xpath))
+        article.text = cleanup_text(extract_nested_text(response, body_xpath))
 
-        item['internal_links'] = []
-        item['external_links'] = []
+        article.internal_links = []
+        article.external_links = []
         # Without http can contain mailto links
         for url in response.xpath(body_xpath + '//a[contains(@href, "http")]/@href').extract():
             if self.base_url in url:
-                item['internal_links'].append(url)
+                article.internal_links.append(url)
             else:
-                item['external_links'].append(url)
+                article.external_links.append(url)
 
-        item['author'] = self.extract_author(response)
+        article.author = self.extract_author(response)
 
-        return item
+        article.save()
+        return article.to_scrapy_item()
 
     @staticmethod
     def extract_author(response):
