@@ -26,7 +26,7 @@ class Nplus1Spider(Spider):
         self.start_urls = ['https://nplus1.ru']
         self.base_url = self.start_urls[0]
 
-        self.db = DB(self.article_url_re)
+        self.db = DB()
 
         super(Nplus1Spider, self).__init__(*args, **kwargs)
 
@@ -121,9 +121,6 @@ class Nplus1Spider(Spider):
         item['author'] = self.extract_author(response)
 
         return item
-
-    def is_article_url(self, url):
-        return bool(re.search(self.article_url_re, url))
 
     @staticmethod
     def extract_author(response):

@@ -10,7 +10,7 @@ class BaseModel(Model):
 
 
 class Article(BaseModel):
-    url = CharField(unique=True),
+    url = CharField(unique=True)
     title = CharField()
     description = CharField()
     date = DateField()

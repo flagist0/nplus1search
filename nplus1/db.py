@@ -1,3 +1,4 @@
+from item import Article, Link
 from web2py_dal import DAL, Field
 
 
@@ -8,9 +9,8 @@ class PageType(object):
 
 
 class DB(object):
-    def __init__(self, article_url_re):
-        self.article_url_re = article_url_re
-        self.db = DAL('sqlite://nplus1.sqlite', pool_size=10, check_reserved=['sqlite', 'mysql'], fake_migrate=True)
+    def __init__(self):
+        self.db = DAL('sqlite://nplus1.sqlite', pool_size=10, check_reserved=['sqlite', 'mysql'])
 
         self.db.define_table('article',
                              Field('url', unique=True),
@@ -56,8 +56,7 @@ class DB(object):
 
     def iter_unparsed_articles_urls(self):
         # Article urls go first
-        for row in self.db((self.a.url != None) & self.a.url.regexp(self.article_url_re) &
-                                   (self.a.title == None)).select():
+        for row in self.db((self.a.url != None) & (self.a.title == None)).select():
             yield row.url
 
         # All the other urls go next
@@ -68,14 +67,18 @@ class DB(object):
         self.db(self.a.url == article['url']).update(**article)
         self.db.commit()
 
-    def parsed_articles_num(self):
-        return self.db(self.a.title != None).count()
+    @staticmethod
+    def parsed_articles_num():
+        return Article.select().where(Article.title != None).count()
 
-    def article_stubs_num(self):
-        return self.db((self.a.title == None) & (self.a.url.regexp(self.article_url_re))).count()
+    @staticmethod
+    def article_stubs_num():
+        return Article.select().where(Article.title == None).count()
 
-    def unparsed_links_num(self):
-        return self.db((self.l.url != None) & (self.l.parsed == False)).count()
+    @staticmethod
+    def unparsed_links_num():
+        return Link.select().where(Link.url != None, Link.parsed == False).count()
 
-    def remove_article_url(self, url):
-        self.db(self.a.url == url).delete()
+    @staticmethod
+    def remove_article_url(url):
+        Article.get(Article.url == url).delete_instance()
