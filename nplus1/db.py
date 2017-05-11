@@ -45,23 +45,24 @@ class DB(object):
             self.db.commit()
 
     def article_is_parsed(self, url):
-        return self.db((self.a.url == url) & (self.a.title != None)).count() == 1
+        return Article.get(Article.url == url).title is not None
 
     def digest_is_parsed(self, url):
-        return self.db((self.l.url == url) & (self.l.parsed == True)).count()
+        return Link.get(Link.url == url).parsed
 
     def mark_digest_as_parsed(self, url):
-        self.db(self.l.url == url).update(parsed=True)
-        self.db.commit()
+        digest = Link.get(Link.url == url)
+        digest.parsed = True
+        digest.save()
 
     def iter_unparsed_articles_urls(self):
         # Article urls go first
-        for row in self.db((self.a.url != None) & (self.a.title == None)).select():
-            yield row.url
+        for art in Article.select().where(Article.url != None, Article.title == None).select():
+            yield art.url
 
         # All the other urls go next
-        for row in self.db((self.l.url != None) & (self.l.parsed == False)).select():
-            yield row.url
+        for link in Link.select().where(Link.url != None, Link.parsed == False):
+            yield link.url
 
     def save_article(self, article):
         self.db(self.a.url == article['url']).update(**article)

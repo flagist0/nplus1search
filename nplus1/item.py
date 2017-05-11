@@ -1,5 +1,9 @@
+import logging
 from peewee import *
 from playhouse.sqlite_ext import JSONField
+
+logger = logging.getLogger('peewee')
+logger.setLevel(logging.INFO)
 
 db = SqliteDatabase('nplus1.sqlite')
 
