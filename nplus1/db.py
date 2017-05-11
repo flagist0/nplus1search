@@ -1,6 +1,7 @@
 from web2py_dal import DAL, Field
 
-from models import Article, Link
+from article import Article
+from link import Link
 
 
 class PageType(object):

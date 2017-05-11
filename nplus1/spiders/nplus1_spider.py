@@ -7,7 +7,8 @@ import lxml
 from scrapy.spiders import Spider
 from scrapy.http import Request
 
-from models import Article, Link
+from article import Article
+from link import Link
 from nplus1.db import DB, PageType
 
 DIGEST_CHANGEABLE_DAYS_NUM = 2

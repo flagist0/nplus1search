@@ -1,19 +1,11 @@
-import logging
-from peewee import *
-from playhouse.sqlite_ext import JSONField
-from playhouse.shortcuts import model_to_dict
-import scrapy
 from pprint import pformat
 
-logger = logging.getLogger('peewee')
-logger.setLevel(logging.INFO)
+import scrapy
+from peewee import CharField, DateField, TextField, IntegerField
+from playhouse.shortcuts import model_to_dict
+from playhouse.sqlite_ext import JSONField
 
-db = SqliteDatabase('nplus1.sqlite')
-
-
-class BaseModel(Model):
-    class Meta:
-        database = db
+from utils import BaseModel
 
 
 class Article(BaseModel):
@@ -48,8 +40,6 @@ class Article(BaseModel):
         for art in Article.select().where(Article.url != None, Article.title == None).select():
             yield art.url
 
-
-
     class ScrapyItem(scrapy.Item):
         data = scrapy.Field()
 
@@ -59,14 +49,3 @@ class Article(BaseModel):
 
     def to_scrapy_item(self):
         return self.ScrapyItem(data=model_to_dict(self))
-
-
-class Link(BaseModel):
-    url = CharField(unique=True)
-    parsed = BooleanField(default=False)
-
-    @staticmethod
-    def iter_unparsed_urls():
-        for link in Link.select().where(Link.url != None, Link.parsed == False):
-            yield link.url
-
