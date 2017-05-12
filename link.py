@@ -8,7 +8,8 @@ class Link(BaseModel):
 
     @staticmethod
     def by_url(url):
-        return Link.get(Link.url == url)
+        return Link.get_or_create(defaults={'url': url},
+                                  url=url)[0]
 
     @staticmethod
     def unparsed_num():
