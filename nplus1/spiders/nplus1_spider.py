@@ -7,8 +7,9 @@ import lxml
 from scrapy.spiders import Spider
 from scrapy.http import Request
 
-from article import Article
+from article import Article, ArticleIndex
 from link import Link
+from utils import db
 
 DIGEST_CHANGEABLE_DAYS_NUM = 2
 
@@ -33,7 +34,13 @@ class Nplus1Spider(Spider):
         self.base_url = 'https://nplus1.ru'
         self.start_urls = [self.base_url]
 
+        self.create_db()
         super(Nplus1Spider, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def create_db():
+        db.connect()
+        db.create_tables([Article, Link, ArticleIndex], True)
 
     def start_requests(self):
         yield Request(self.start_urls[0])

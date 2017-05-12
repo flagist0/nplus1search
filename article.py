@@ -3,9 +3,9 @@ from pprint import pformat
 import scrapy
 from peewee import CharField, DateField, TextField, IntegerField
 from playhouse.shortcuts import model_to_dict
-from playhouse.sqlite_ext import JSONField
+from playhouse.sqlite_ext import JSONField, SearchField, FTSModel
 
-from utils import BaseModel
+from utils import BaseModel, db
 
 
 class Article(BaseModel):
@@ -58,3 +58,32 @@ class Article(BaseModel):
 
     def to_scrapy_item(self):
         return self.ScrapyItem(data=model_to_dict(self))
+
+
+class ArticleIndex(FTSModel):
+    title = SearchField()
+    content = SearchField()
+
+    class Meta:
+        database = db
+        # Use the porter stemming algorithm to tokenize content.
+        extension_options = {'tokenize': 'porter'}
+
+    @staticmethod
+    def index_article(article):
+        ArticleIndex.insert({
+            ArticleIndex.docid: article.id,
+            ArticleIndex.title: article.title,
+            ArticleIndex.content: article.text}).execute()
+
+    @staticmethod
+    def search(phrase):
+        # Query the search index and join the corresponding Document
+        # object on each search result.
+        return (Article
+                .select()
+                .join(
+                      ArticleIndex,
+                      on=(Article.id == ArticleIndex.docid))
+                .where(ArticleIndex.match(phrase))
+                .order_by(ArticleIndex.bm25()))
