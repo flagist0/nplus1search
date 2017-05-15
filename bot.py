@@ -13,10 +13,11 @@ class SearchBot(object):
         token = self.get_token()
         self.updater = Updater(token=token)
 
-        self.updater.dispatcher.add_handler(CommandHandler('start', SearchBot.show_help))
-        self.updater.dispatcher.add_handler(CommandHandler('info', SearchBot.show_database_info))
-        self.updater.dispatcher.add_handler(CommandHandler('author', SearchBot.search_by_author, pass_args=True))
-        self.updater.dispatcher.add_handler(CommandHandler('search', SearchBot.search_text, pass_args=True))
+        dispatcher = self.updater.dispatcher
+        dispatcher.add_handler(CommandHandler('start', SearchBot.show_help))
+        dispatcher.add_handler(CommandHandler('info', SearchBot.show_database_info))
+        dispatcher.add_handler(CommandHandler('author', SearchBot.search_by_author, pass_args=True))
+        dispatcher.add_handler(MessageHandler(Filters.text, SearchBot.search_text))
 
         self.updater.start_polling()
 
@@ -32,8 +33,8 @@ class SearchBot(object):
         Я бот-поисковик по http://nplus1.ru
         Сейчас в моей базе {} статей
         Команды:
+        <текст> -- поиск по тексту статей
         /author <автор> -- поиск по имени автора
-        /search <запрос> -- поиск по тексту статьи
         PS: пока ничего не работает
         """.format(Article.parsed_num())
         bot.send_message(chat_id=update.message.chat_id,
@@ -56,9 +57,9 @@ class SearchBot(object):
                          parse_mode=ParseMode.MARKDOWN)
 
     @staticmethod
-    def search_text(bot, update, args):
+    def search_text(bot, update):
         try:
-            query = ' '.join(args)
+            query = update.message.text
 
             articles = ArticleIndex.search(query)
             if articles.count():
@@ -72,9 +73,8 @@ class SearchBot(object):
                              text=output,
                              parse_mode=ParseMode.MARKDOWN)
         except Exception as e:
-            bot.send_message(chat_id=update.message.chat_id,
-                             text=str(e))
-
+            bot.logger.exception(e)
+            raise
 
     @staticmethod
     def get_token():
