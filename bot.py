@@ -7,6 +7,8 @@ from article import Article, ArticleIndex
 
 ARTICLES_ON_PAGE_NUM = 10
 
+query_by_hash = {}
+
 logging.basicConfig()
 log = logging.getLogger('bot')
 log.setLevel(logging.DEBUG)
@@ -49,9 +51,12 @@ def get_search_by_author_response(author, cur_page):
         offset, limit, total = get_pagination(cursor, cur_page)
         output = get_count_header(offset, limit, total)
         output += get_search_response_text(cursor, offset, limit)
+        author_hash = hash(author)
+        query_by_hash[author_hash] = author
         reply_markup = get_reply_markup(cur_page, offset, limit, total,
                                         # callback data len is limited to 64b
-                                        {'meth': 's_b_a', 'ar': author})  # search_by_author
+                                        {'meth': 's_b_a', # search_by_author
+                                         'ah': author_hash})  # author hash, dirty stateful hack because of cb data limits
     else:
         output = u'Статей автора "{}" не найдено'.format(author)
 
@@ -107,7 +112,8 @@ def button(bot, update):
 
     response_opts = {'text': data}
     if data['meth'] == 's_b_a':
-        response_opts = get_search_by_author_response(data['ar'], cur_page=data['page'])
+        author = query_by_hash.pop(data['ah'])
+        response_opts = get_search_by_author_response(author, cur_page=data['page'])
 
     bot.edit_message_text(chat_id=query.message.chat_id,
                           message_id=query.message.message_id,
