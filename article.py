@@ -41,14 +41,6 @@ class Article(BaseModel):
             yield art.url
 
     @staticmethod
-    def search_by_author(name, offset=None, limit=None):
-        articles = Article.select().where(Article.author == name).order_by(Article.date.desc())
-        if offset is not None:
-            assert limit is not None
-            articles = articles.offset(offset).limit(limit)
-        return articles
-
-    @staticmethod
     def parsed_num():
         return Article.select().where(Article.title != None).count()
 

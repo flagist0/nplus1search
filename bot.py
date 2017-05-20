@@ -5,7 +5,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 from telegram import ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from article import Article, ArticleIndex
 
-ARTICLES_ON_PAGE_NUM = 15
+ARTICLES_ON_PAGE_NUM = 10
 
 logging.basicConfig()
 log = logging.getLogger('bot')
@@ -39,31 +39,12 @@ def search_by_author(bot, update, args):
 
     count = Article.select().where(Article.author == author).count()
     if count:
-        lines = [u'Найдено {} статей:'.format(count)]
-
         cur_page = 0
-        offset = cur_page * ARTICLES_ON_PAGE_NUM
-        limit = min(ARTICLES_ON_PAGE_NUM, count - offset)
-        lines.append(u'Статьи {}-{}/{}'.format(offset, offset + limit, count))
-
-        articles = Article.search_by_author(author, offset, limit)
-        lines += [u'*{}* {} {}'.format(article.title, article.date, article.url) for article in articles]
-
-        output = '\n\n'.join(lines)
-
-        buttons = []
-        if cur_page:
-            callback_data = {'method': 'by_author', 'page': cur_page - 1}
-            back_button = InlineKeyboardButton('<', callback_data=json.dumps(callback_data))
-            buttons.append(back_button)
-
-        if offset + limit < count:
-            callback_data = {'method': 'by_author', 'page': cur_page + 1}
-            forth_button = InlineKeyboardButton('>', callback_data=json.dumps(callback_data))
-            buttons.append(forth_button)
-
-        if buttons:
-            reply_markup = InlineKeyboardMarkup([buttons])
+        cursor = Article.select().where(Article.author == author).order_by(Article.date.desc())
+        offset, limit, total = get_pagination(cursor, cur_page)
+        output = get_count_header(offset, limit, total)
+        output += get_search_response_text(cursor, offset, limit)
+        reply_markup = get_reply_markup(cur_page, offset, limit, total)
     else:
         output = u'Статей автора "{}" не найдено'.format(author)
 
@@ -71,6 +52,40 @@ def search_by_author(bot, update, args):
                      text=output,
                      parse_mode=ParseMode.MARKDOWN,
                      reply_markup=reply_markup)
+
+
+def get_pagination(cursor, cur_page):
+    total_count = cursor.count()
+    offset = cur_page * ARTICLES_ON_PAGE_NUM
+    limit = min(ARTICLES_ON_PAGE_NUM, total_count - offset)
+    return offset, limit, total_count
+
+
+def get_count_header(offset, limit, total):
+    return u'Найдено {} статей\nСтатьи {}-{}/{}:\n\n'.format(total, offset, offset + limit, total)
+
+
+def get_search_response_text(cursor, offset, limit):
+    articles = cursor.offset(offset).limit(limit)
+    lines = [u'*{}* {} {}'.format(article.title, article.date, article.url) for article in articles]
+
+    return '\n\n'.join(lines)
+
+
+def get_reply_markup(cur_page, offset, limit, total):
+    buttons = []
+    if cur_page:
+        callback_data = {'method': 'search_by_author', 'page': cur_page - 1}
+        back_button = InlineKeyboardButton('<', callback_data=json.dumps(callback_data))
+        buttons.append(back_button)
+
+    if offset + limit < total:
+        callback_data = {'method': 'search_by_author', 'page': cur_page + 1}
+        forth_button = InlineKeyboardButton('>', callback_data=json.dumps(callback_data))
+        buttons.append(forth_button)
+
+    reply_markup = InlineKeyboardMarkup([buttons]) if buttons else None
+    return reply_markup
 
 
 def button(bot, update):
