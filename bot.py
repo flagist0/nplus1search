@@ -9,6 +9,7 @@ ARTICLES_ON_PAGE_NUM = 10
 
 logging.basicConfig()
 log = logging.getLogger('bot')
+log.setLevel(logging.DEBUG)
 
 
 def show_database_info(bot, update):
@@ -34,24 +35,32 @@ def show_help(bot, update):
 
 
 def search_by_author(bot, update, args):
-    reply_markup = None
     author = ' '.join(args)
 
+    response_opts = get_search_by_author_response(author, cur_page=0)
+    bot.send_message(chat_id=update.message.chat_id, **response_opts)
+
+
+def get_search_by_author_response(author, cur_page):
+    reply_markup = None
     count = Article.select().where(Article.author == author).count()
     if count:
-        cur_page = 0
         cursor = Article.select().where(Article.author == author).order_by(Article.date.desc())
         offset, limit, total = get_pagination(cursor, cur_page)
         output = get_count_header(offset, limit, total)
         output += get_search_response_text(cursor, offset, limit)
-        reply_markup = get_reply_markup(cur_page, offset, limit, total)
+        reply_markup = get_reply_markup(cur_page, offset, limit, total,
+                                        # callback data len is limited to 64b
+                                        {'meth': 's_b_a', 'ar': author})  # search_by_author
     else:
         output = u'Статей автора "{}" не найдено'.format(author)
 
-    bot.send_message(chat_id=update.message.chat_id,
-                     text=output,
-                     parse_mode=ParseMode.MARKDOWN,
-                     reply_markup=reply_markup)
+    result = {
+        'text': output,
+        'parse_mode': ParseMode.MARKDOWN,
+        'reply_markup': reply_markup
+    }
+    return result
 
 
 def get_pagination(cursor, cur_page):
@@ -72,16 +81,20 @@ def get_search_response_text(cursor, offset, limit):
     return '\n\n'.join(lines)
 
 
-def get_reply_markup(cur_page, offset, limit, total):
+def get_reply_markup(cur_page, offset, limit, total, cb_data_additions):
     buttons = []
     if cur_page:
-        callback_data = {'method': 'search_by_author', 'page': cur_page - 1}
-        back_button = InlineKeyboardButton('<', callback_data=json.dumps(callback_data))
+        callback_data = {'page': cur_page - 1}
+        callback_data.update(cb_data_additions)
+        callback_data = json.dumps(callback_data)
+        back_button = InlineKeyboardButton('<', callback_data=callback_data)
         buttons.append(back_button)
 
     if offset + limit < total:
-        callback_data = {'method': 'search_by_author', 'page': cur_page + 1}
-        forth_button = InlineKeyboardButton('>', callback_data=json.dumps(callback_data))
+        callback_data = {'page': cur_page + 1}
+        callback_data.update(cb_data_additions)
+        callback_data = json.dumps(callback_data)
+        forth_button = InlineKeyboardButton('>', callback_data=callback_data)
         buttons.append(forth_button)
 
     reply_markup = InlineKeyboardMarkup([buttons]) if buttons else None
@@ -92,9 +105,13 @@ def button(bot, update):
     query = update.callback_query
     data = json.loads(query.data)
 
-    bot.edit_message_text(text="Selected option: %s" % data,
-                          chat_id=query.message.chat_id,
-                          message_id=query.message.message_id)
+    response_opts = {'text': data}
+    if data['meth'] == 's_b_a':
+        response_opts = get_search_by_author_response(data['ar'], cur_page=data['page'])
+
+    bot.edit_message_text(chat_id=query.message.chat_id,
+                          message_id=query.message.message_id,
+                          **response_opts)
 
 
 def search_text(bot, update):
@@ -117,6 +134,10 @@ def search_text(bot, update):
         raise
 
 
+def error_handler(bot, update, error):
+    log.exception(error)
+
+
 def get_token():
     with open('token.txt') as fh:
         return fh.readline().strip()
@@ -130,6 +151,7 @@ def add_handlers(updater):
     dispatcher.add_handler(CommandHandler('author', search_by_author, pass_args=True))
     dispatcher.add_handler(CallbackQueryHandler(button))
     dispatcher.add_handler(MessageHandler(Filters.text, search_text))
+    dispatcher.add_error_handler(error_handler)
 
 
 if __name__ == '__main__':
