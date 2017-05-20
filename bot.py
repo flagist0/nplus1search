@@ -43,11 +43,19 @@ def search_by_author(bot, update, args):
     bot.send_message(chat_id=update.message.chat_id, **response_opts)
 
 
+def search_by_text(bot, update):
+    query = update.message.text
+
+    response_opts = get_search_by_text_response(query, cur_page=0)
+    bot.send_message(chat_id=update.message.chat_id, **response_opts)
+
+
 def get_search_by_author_response(author, cur_page):
     reply_markup = None
-    count = Article.select().where(Article.author == author).count()
+    where = Article.author == author
+    count = Article.select().where(where).count()
     if count:
-        cursor = Article.select().where(Article.author == author).order_by(Article.date.desc())
+        cursor = Article.select().where(where).order_by(Article.date.desc())
         offset, limit, total = get_pagination(cursor, cur_page)
         output = get_count_header(offset, limit, total)
         output += get_search_response_text(cursor, offset, limit)
@@ -59,6 +67,32 @@ def get_search_by_author_response(author, cur_page):
                                          'ah': author_hash})  # author hash, dirty stateful hack because of cb data limits
     else:
         output = u'Статей автора "{}" не найдено'.format(author)
+
+    result = {
+        'text': output,
+        'parse_mode': ParseMode.MARKDOWN,
+        'reply_markup': reply_markup
+    }
+    return result
+
+
+def get_search_by_text_response(query_text, cur_page):
+    reply_markup = None
+
+    cursor = ArticleIndex.search(query_text)
+    count = cursor.count()
+    if count:
+        offset, limit, total = get_pagination(cursor, cur_page)
+        output = get_count_header(offset, limit, total)
+        output += get_search_response_text(cursor, offset, limit)
+        query_hash = hash(query_text)
+        query_by_hash[query_hash] = query_text
+        reply_markup = get_reply_markup(cur_page, offset, limit, total,
+                                        # callback data len is limited to 64b
+                                        {'meth': 's_b_t',  # search_by_text
+                                         'qth': query_hash})  # query_text hash, dirty stateful hack because of cb data limits
+    else:
+        output = u'Статей по запросу "{}" не найдено'.format(query_text)
 
     result = {
         'text': output,
@@ -106,7 +140,7 @@ def get_reply_markup(cur_page, offset, limit, total, cb_data_additions):
     return reply_markup
 
 
-def button(bot, update):
+def callback_handler(bot, update):
     query = update.callback_query
     data = json.loads(query.data)
 
@@ -114,30 +148,13 @@ def button(bot, update):
     if data['meth'] == 's_b_a':
         author = query_by_hash.pop(data['ah'])
         response_opts = get_search_by_author_response(author, cur_page=data['page'])
+    elif data['meth'] == 's_b_t':
+        query_text = query_by_hash.pop(data['qth'])
+        response_opts = get_search_by_text_response(query_text, cur_page=data['page'])
 
     bot.edit_message_text(chat_id=query.message.chat_id,
                           message_id=query.message.message_id,
                           **response_opts)
-
-
-def search_text(bot, update):
-    try:
-        query = update.message.text
-
-        articles = ArticleIndex.search(query)
-        if articles.count():
-            lines = [u'Найдено {} статей:'.format(articles.count())]
-            lines += [u'*{}* {} {}'.format(article.title, article.date, article.url) for article in articles]
-            output = '\n\n'.join(lines)
-        else:
-            output = u'Статей по запросу "{}" не найдено'.format(query)
-
-        bot.send_message(chat_id=update.message.chat_id,
-                         text=output,
-                         parse_mode=ParseMode.MARKDOWN)
-    except Exception as e:
-        log.exception(e)
-        raise
 
 
 def error_handler(bot, update, error):
@@ -155,8 +172,8 @@ def add_handlers(updater):
     dispatcher.add_handler(CommandHandler('help', show_help))
     dispatcher.add_handler(CommandHandler('info', show_database_info))
     dispatcher.add_handler(CommandHandler('author', search_by_author, pass_args=True))
-    dispatcher.add_handler(CallbackQueryHandler(button))
-    dispatcher.add_handler(MessageHandler(Filters.text, search_text))
+    dispatcher.add_handler(CallbackQueryHandler(callback_handler))
+    dispatcher.add_handler(MessageHandler(Filters.text, search_by_text))
     dispatcher.add_error_handler(error_handler)
 
 
