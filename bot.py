@@ -58,7 +58,7 @@ def get_search_by_author_response(author, cur_page):
         cursor = Article.select().where(where).order_by(Article.date.desc())
         offset, limit, total = get_pagination(cursor, cur_page)
         output = get_count_header(offset, limit, total)
-        output += get_search_response_text(cursor, offset, limit)
+        output += get_search_by_author_response_text(cursor, offset, limit)
         author_hash = hash(author)
         query_by_hash[author_hash] = author
         reply_markup = get_reply_markup(cur_page, offset, limit, total,
@@ -84,7 +84,7 @@ def get_search_by_text_response(query_text, cur_page):
     if count:
         offset, limit, total = get_pagination(cursor, cur_page)
         output = get_count_header(offset, limit, total)
-        output += get_search_response_text(cursor, offset, limit)
+        output += get_search_by_text_response_text(cursor, offset, limit)
         query_hash = hash(query_text)
         query_by_hash[query_hash] = query_text
         reply_markup = get_reply_markup(cur_page, offset, limit, total,
@@ -113,9 +113,17 @@ def get_count_header(offset, limit, total):
     return u'Найдено {} статей\nСтатьи {}-{}/{}:\n\n'.format(total, offset, offset + limit, total)
 
 
-def get_search_response_text(cursor, offset, limit):
+def get_search_by_author_response_text(cursor, offset, limit):
     articles = cursor.offset(offset).limit(limit)
     lines = [u'*{}* {} {}'.format(article.title, article.date, article.url) for article in articles]
+
+    return '\n\n'.join(lines)
+
+
+def get_search_by_text_response_text(cursor, offset, limit):
+    articles = cursor.offset(offset).limit(limit)
+    lines = [u'*{}* {}\n{}\n{}'.format(article.title, article.date, article.snippets, article.url)
+             for article in articles]
 
     return '\n\n'.join(lines)
 

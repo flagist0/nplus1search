@@ -58,6 +58,10 @@ class Article(BaseModel):
     def to_scrapy_item(self):
         return self.ScrapyItem(data=model_to_dict(self))
 
+    def save(self, force_insert=False, only=None):
+        super(Article, self).save(force_insert, only)
+        ArticleIndex.index_article(self)
+
 
 class ArticleIndex(FTSModel):
     title = SearchField()
@@ -81,7 +85,7 @@ class ArticleIndex(FTSModel):
         # object on each search result.
         # Adds "snippets" field, containing matches
         return (Article
-                .select(Article.title,
+                .select(Article,
                         fn.snippet(ArticleIndex.as_entity(), '*', '*', '...').alias('snippets'))
                 .join(
                       ArticleIndex,
