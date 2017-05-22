@@ -173,4 +173,4 @@ def extract_nested_text(response, xpath):
 def cleanup_text(text):
     text = re.sub(r'(\r*\n)\1+', '\n', text)
     text = re.sub(r'\s+', ' ', text)
-    return text
+    return unicode(text, 'utf-8')

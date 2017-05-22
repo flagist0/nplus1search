@@ -1,7 +1,7 @@
 from pprint import pformat
 
 import scrapy
-from peewee import CharField, DateField, TextField, IntegerField
+from peewee import CharField, DateField, TextField, IntegerField, fn
 from playhouse.shortcuts import model_to_dict
 from playhouse.sqlite_ext import JSONField, SearchField, FTSModel
 
@@ -79,8 +79,10 @@ class ArticleIndex(FTSModel):
     def search(phrase):
         # Query the search index and join the corresponding Document
         # object on each search result.
+        # Adds "snippets" field, containing matches
         return (Article
-                .select()
+                .select(Article.title,
+                        fn.snippet(ArticleIndex.as_entity(), '*', '*', '...').alias('snippets'))
                 .join(
                       ArticleIndex,
                       on=(Article.id == ArticleIndex.docid))
