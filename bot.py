@@ -1,6 +1,8 @@
 # encoding: utf-8
 import logging
 import json
+import subprocess
+from datetime import datetime
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram import ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from article import Article, ArticleIndex
@@ -23,15 +25,29 @@ def show_help(bot, update):
     message = u"""
     Привет!
     Я бот-поисковик по http://nplus1.ru
-    Сейчас в моей базе {} статей
+    Сейчас в моей базе {} статей, последнее обновление базы было {}
     Команды:
     *<текст>* -- поиск по тексту статей
     */author <автор>* -- поиск по имени автора
+    */update* -- обновление базы
     */help* -- эта справка
-    """.format(Article.parsed_num())
+    """.format(Article.parsed_num(),
+               open('last_update.txt').readline().strip())
     bot.send_message(chat_id=update.message.chat_id,
                      text=message,
                      parse_mode=ParseMode.MARKDOWN)
+
+
+def rescrape(bot, update):
+    bot.send_message(chat_id=update.message.chat_id,
+                     text=u'Начинаю обновление базы')
+
+    process = subprocess.Popen(['scrapy', 'crawl', 'nplus1'], stdout=subprocess.PIPE)
+    process.communicate()
+    bot.send_message(chat_id=update.message.chat_id,
+                     text=u'Обновление базы закончено!')
+    with open('last_update.txt', 'w') as fh:
+        fh.write('{}'.format(datetime.now().strftime('%Y-%m-%d %H:%M')))
 
 
 def search_by_author(bot, update, args):
@@ -177,6 +193,7 @@ def add_handlers(updater):
     dispatcher.add_handler(CommandHandler('start', show_help))
     dispatcher.add_handler(CommandHandler('help', show_help))
     dispatcher.add_handler(CommandHandler('info', show_database_info))
+    dispatcher.add_handler(CommandHandler('update', rescrape))
     dispatcher.add_handler(CommandHandler('author', search_by_author, pass_args=True))
     dispatcher.add_handler(CallbackQueryHandler(callback_handler))
     dispatcher.add_handler(MessageHandler(Filters.text, search_by_text))
