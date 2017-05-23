@@ -60,7 +60,7 @@ class Article(BaseModel):
 
     def save(self, force_insert=False, only=None):
         super(Article, self).save(force_insert, only)
-#        ArticleIndex.index_article(self)
+        ArticleIndex.index_article(self)
 
 
 class ArticleIndex(FTSModel):
@@ -74,10 +74,14 @@ class ArticleIndex(FTSModel):
 
     @staticmethod
     def index_article(article):
-        ArticleIndex.insert({
-            ArticleIndex.docid: article.id,
-            ArticleIndex.title: article.title,
-            ArticleIndex.content: article.text}).execute()
+        q = ArticleIndex.docid == article.id
+        if not ArticleIndex.select().where(q).count():
+            ArticleIndex.insert({
+                ArticleIndex.docid: article.id,
+                ArticleIndex.title: article.title,
+                ArticleIndex.content: article.text}).execute()
+        else:
+            ArticleIndex.update(title=article.title, content=article.text).where(q)
 
     @staticmethod
     def search_by_text(phrase):

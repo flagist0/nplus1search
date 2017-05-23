@@ -28,8 +28,6 @@ def show_help(bot, update):
     *<текст>* -- поиск по тексту статей
     */author <автор>* -- поиск по имени автора
     */help* -- эта справка
-    
-    PS: пока ничего не работает
     """.format(Article.parsed_num())
     bot.send_message(chat_id=update.message.chat_id,
                      text=message,
