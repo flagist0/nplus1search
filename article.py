@@ -69,8 +69,8 @@ class ArticleIndex(FTSModel):
 
     class Meta:
         database = db
-        # Use the porter stemming algorithm to tokenize content.
-        extension_options = {'tokenize': 'porter'}
+        # Use our custom tokenizer
+        extension_options = {'tokenize': 'snowball_russian'}
 
     @staticmethod
     def index_article(article):
@@ -80,10 +80,10 @@ class ArticleIndex(FTSModel):
             ArticleIndex.content: article.text}).execute()
 
     @staticmethod
-    def search(phrase):
-        # Query the search index and join the corresponding Document
-        # object on each search result.
-        # Adds "snippets" field, containing matches
+    def search_by_text(phrase):
+        # Query the search_by_text index and join the corresponding Document
+        # object on each search_by_text result.
+        # Adds "snippets" field containing matches
         return (Article
                 .select(Article,
                         fn.snippet(ArticleIndex.as_entity(), '*', '*', '...').alias('snippets'))

@@ -39,7 +39,6 @@ class Nplus1Spider(Spider):
 
     @staticmethod
     def create_db():
-        db.connect()
         db.create_tables([Article, Link, ArticleIndex], True)
 
     def start_requests(self):

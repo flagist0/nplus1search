@@ -79,7 +79,7 @@ def get_search_by_author_response(author, cur_page):
 def get_search_by_text_response(query_text, cur_page):
     reply_markup = None
 
-    cursor = ArticleIndex.search(query_text)
+    cursor = ArticleIndex.search_by_text(query_text)
     count = cursor.count()
     if count:
         offset, limit, total = get_pagination(cursor, cur_page)
