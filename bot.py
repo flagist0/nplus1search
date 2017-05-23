@@ -31,6 +31,8 @@ def show_help(bot, update):
     */author <автор>* -- поиск по имени автора
     */update* -- обновление базы
     */help* -- эта справка
+
+    Исходники доступны тут: https://github.com/flagist0/nplus1search
     """.format(Article.parsed_num(),
                open('last_update.txt').readline().strip())
     bot.send_message(chat_id=update.message.chat_id,
