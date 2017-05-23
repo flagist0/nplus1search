@@ -17,11 +17,10 @@ class SnowballRussianTokenizer(fts.Tokenizer):
 
         for match in self.split_pattern.finditer(text):
             start, end = match.span()
-            token = text[start:end].lower()
-            stemmed = self.stemmer.stemWord(token)
-            length = len(token.encode('utf-8'))
+            word = text[start:end].lower()
+            length = len(word.encode('utf-8'))
             pos = len(text[:start].encode('utf-8'))
-            print stemmed, pos, pos + length
+            stemmed = self.stemmer.stemWord(word)
             yield stemmed, pos, pos + length
 
 

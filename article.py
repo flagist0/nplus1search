@@ -60,7 +60,7 @@ class Article(BaseModel):
 
     def save(self, force_insert=False, only=None):
         super(Article, self).save(force_insert, only)
-        ArticleIndex.index_article(self)
+#        ArticleIndex.index_article(self)
 
 
 class ArticleIndex(FTSModel):

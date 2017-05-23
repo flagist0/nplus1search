@@ -3,13 +3,19 @@ from playhouse.sqlite_ext import SqliteExtDatabase
 from peewee import Model
 from tokenizer import register_tokenizer
 
-logger = logging.getLogger('peewee')
-logger.setLevel(logging.INFO)
+logging.getLogger('peewee').setLevel(logging.INFO)
+logger = logging.getLogger('utils')
+logger.setLevel(logging.DEBUG)
 
-db = SqliteExtDatabase('nplus1.sqlite')
+
+class SqliteDatabaseCustom(SqliteExtDatabase):
+    def initialize_connection(self, conn):
+        register_tokenizer(conn)
+        logger.debug('Initialized tokenizer with conn {}'.format(conn))
+
+
+db = SqliteDatabaseCustom('nplus1.sqlite')
 db.connect()
-conn = db._local.conn  # Yepp, we had to do it
-register_tokenizer(conn)
 
 
 class BaseModel(Model):
